@@ -23,7 +23,7 @@ import argparse
 import shutil 
 
 '''
-Sirepo SRW beamline source:      https://www.sirepo.com/srw#/beamline/sDw05G14
+Sirepo SRW beamline source:      https://www.sirepo.com/srw#/beamline/BDqDY4T0
 '''
 
 
