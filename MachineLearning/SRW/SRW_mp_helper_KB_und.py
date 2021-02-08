@@ -1,4 +1,3 @@
-
 import os
 import time 
 import srwl_bl
@@ -272,7 +271,7 @@ def get_reset_varParam():
     ['op_M1_nvz', 'f', -0.03493389067727645, 'normalVectorZ'],
     ['op_M1_tvx', 'f', -0.03493389067727645, 'tangentialVectorX'],
     ['op_M1_tvy', 'f', 0.0, 'tangentialVectorY'],
-    ['op_M1_x', 'f', 0.0001, 'horizontalOffset'],
+    ['op_M1_x', 'f', 0.0, 'horizontalOffset'],
     ['op_M1_y', 'f', 0.0, 'verticalOffset'],
 
     # M1_M2: drift
@@ -293,7 +292,7 @@ def get_reset_varParam():
     ['op_M2_tvx', 'f', 0.0, 'tangentialVectorX'],
     ['op_M2_tvy', 'f', 0.03493389067727645, 'tangentialVectorY'],
     ['op_M2_x', 'f', 0.0, 'horizontalOffset'],
-    ['op_M2_y', 'f', 0.0001, 'verticalOffset'],
+    ['op_M2_y', 'f', 0.0, 'verticalOffset'],
 
     # M2_Watchpoint: drift
     ['op_M2_Watchpoint_L', 'f', 8.0, 'length'],
