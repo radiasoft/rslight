@@ -200,7 +200,7 @@ def main():
         os.makedirs('datasets')
         
     ####################### update this for number of simulations you want to run 
-    n_runs = 100
+    n_runs = 1000
     
     
     ####################### update this to cpu_count() - 1 if you are running other things on the server at the same time 
@@ -220,8 +220,8 @@ def main():
     
     ####################### set these values to determine which offsets/rotations you want applied in your dataset 
     offsets_mirror1 = True
-    offsets_mirror2 = False
-    rotations_mirror1 = True 
+    offsets_mirror2 = True
+    rotations_mirror1 = False 
     rotations_mirror2 = False
     watchpoint_pos = False
     
@@ -334,6 +334,7 @@ def main():
     
     
     ###### actual input and output files used for ML 
+    print('\n saving the ML files \n')
     np.save('datasets/beam_intensities_' + save_str + str(n_runs) + 'runs.npy', beams_all)
     np.save('datasets/parameters_' + save_str + str(n_runs) + 'runs.npy', params_all)
     

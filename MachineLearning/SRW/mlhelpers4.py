@@ -30,13 +30,15 @@ class PlotLosses(keras.callbacks.Callback):
         self.val_losses.append(logs.get('val_loss'))
         self.i += 1
         
-        clear_output(wait=True)
-        plt.semilogy(self.x, self.losses, label="loss")
-        plt.semilogy(self.x, self.val_losses, label="val_loss")
-        plt.legend()
-        plt.ylabel('error')
-        plt.xlabel('epoch')
-        plt.show();
+        if epoch%10 == 0:
+        
+            clear_output(wait=True)
+            plt.semilogy(self.x, self.losses, label="loss")
+            plt.semilogy(self.x, self.val_losses, label="val_loss")
+            plt.legend()
+            plt.ylabel('error')
+            plt.xlabel('epoch')
+            plt.show();
         
 plot_losses = PlotLosses()
 
