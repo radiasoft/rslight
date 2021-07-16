@@ -15,7 +15,7 @@ import srwl_uti_smp
 import numpy as np
 from multiprocessing import Process, Lock
 import multiprocessing
-from SRW_mp_helper import * 
+from SRW_mp_helper import * #SRW_mp_helper_KB_und
 import queue 
 from queue import Queue
 import time 
@@ -200,7 +200,7 @@ def main():
         os.makedirs('datasets')
         
     ####################### update this for number of simulations you want to run 
-    n_runs = 5000
+    n_runs = 5
     
     
     ####################### update this to cpu_count() - 1 if you are running other things on the server at the same time 
@@ -220,9 +220,9 @@ def main():
     
     ####################### set these values to determine which offsets/rotations you want applied in your dataset 
     offsets_mirror1 = True
-    offsets_mirror2 = False
+    offsets_mirror2 = True
     rotations_mirror1 = True 
-    rotations_mirror2 = False
+    rotations_mirror2 = True
     watchpoint_pos = False
     
     ####################### uniformly distributed parameter offsets   
