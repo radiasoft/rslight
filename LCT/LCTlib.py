@@ -15,7 +15,7 @@ def createABCDbeamline(A,B,C,D):
     f2 = B/(1-D)
     
     optLens1 = SRWLOptL(f1, f1)
-    optDrift=SRWLOptD(L)
+    optDrift = SRWLOptD(L)
     optLens2 = SRWLOptL(f2, f2)
     
     propagParLens1 = [0, 0, 1., 0, 0, 1, 1, 1, 1, 0, 0, 0]
