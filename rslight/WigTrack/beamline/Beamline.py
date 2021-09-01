@@ -23,11 +23,19 @@ class Beamline:
         return elem_names
     
     
-    def propagate_beamline(self, wd):
+    def propagate_beamline(self, field):
         """Propagate a Wigner distribution through the beamline
+        
+        Args:
+        -----
         
         wd : Wigner distribution
             The distribution to be evolved through the beamline"""
         
-        for elem in self.elements:
-            elem.propagate(wd)
+        if field.kind == 'Wigner':
+            for elem in self.elements:
+                elem.propagate_wigner(field)
+                
+        elif field.kind == 'Field':
+            for elem in self.elements:
+                eleme.propagate_field(field)

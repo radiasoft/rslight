@@ -34,10 +34,15 @@ class Drift(Linear):
         return self._elem_type
     
     
-    def propagate(self, wd):
+    def propagate_wigner(self, wd):
         
         # move the shapes in phase space
         new_coords = deepcopy(wd.coord_grid)
         new_coords[:,:,0] += wd.coord_grid[:,:,1]*L
         
         wd.update_weights(new_coords)
+        
+        
+    def propagate_field(self, fd):
+        
+        return 0

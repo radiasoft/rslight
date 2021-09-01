@@ -27,15 +27,18 @@ class Linear:
         """Get the name of the element"""
         return self._elem_name
     
+    
     @property
     def elem_type(self):
         """Get the name of the element"""
         return self._elem_type
     
+    
     def propagate(self, wd):
         """Propagate a Wigner distribution through this element
         
         Args:
+        -----
         
         wd : WignerDistribution class
             The Wigner distribution to be propagated

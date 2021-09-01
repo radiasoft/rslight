@@ -38,7 +38,4 @@ class ThinLens(Linear):
     def propagate(self, wd):
         
         # move the shapes in phase space
-        new_coords = deepcopy(wd.coord_grid)
-        new_coords[:,:,1] -= wd.coord_grid[:,:,0]/self.f
-        
-        wd.update_weights(new_coords)
+        wd.coord_array = np.einsum('ij, kj -> ki', wd.coord_array)
