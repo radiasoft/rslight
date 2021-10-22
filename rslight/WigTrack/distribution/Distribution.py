@@ -11,14 +11,16 @@ class WignerDistribution:
     def __init__(self, ns = [10, 10, 10, 10], Ls = [1., 1., 1., 1.]):
 
         self.dim = len(ns)
+        self.cell_ns = np.array(ns)
         self.n_cells = np.prod(ns)
         self.cell_dims = ns
-        self.cell_lens = Ls
-        self.cell_ds   = np.arrays(ns)/np.array(Ls)
+        self.lens = np.array(Ls)
+        self.cell_ds   = np.array(Ls)/np.array(self.cell_ns - 1.)
 
         # set the lambda_0 matrix used in the deposition. 
         # Just set the matrix once, as it is sparse and expensive to construct
         self.coord_array = self._get_grid_coordinates()
+        print(self.coord_array)
         self._lambda_0 = self._compute_lambda_matrix(self.coord_array)
         
         self.kind = 'Wigner'
@@ -29,7 +31,7 @@ class WignerDistribution:
     ##
 
     def deposit_to_grid(self):
-    """Deposit the shifted grid points back to the original grid"""
+        """Deposit the shifted grid points back to the original grid"""
     
         lambda_matrix = self._compute_lambda_matrix(self.coords)
         self.wgt_array = scipy.sparse.linalg.spsolve(self._lambda_0, lambda_matrix.dot(self.wgt_array))
@@ -37,31 +39,31 @@ class WignerDistribution:
 
     @jit
     def _compute_lambda_matrix(self, coordinates):
-    """Compute the convolution matrix for a set of coordinates back to the original grid
-    
-    Args:
-    -----
-    coordinates : (numpy array) an array of moved grid coordinates
-    
-    Returns:
-    --------
-    lambda_matrix : (sparse matrix) matrix of convolutions of each coordinate with the corresponding grid cells"""
-    
-    matrix = scipy.sparse.lil_matrix((self.n_cells, self.n_cells))
-    
-    if len(coord) == 2:
-        lambda_comp = self._add_ptcl_wgt_lambda_2d
-    else:
-        lambda_comp = self._add_ptcl_wgt_lambda
-    
-    for idx, coord in enumerate(coordinates):
-        lambda_comp(idx, coord, matrix)
-        
-    # benchmark csr versus csc for performance -sdw, Sep. 1 2021
-    # matrix.tocsc()
-    matrix.tocsr() 
-        
-    return matrix
+        """Compute the convolution matrix for a set of coordinates back to the original grid
+
+        Args:
+        -----
+        coordinates : (numpy array) an array of moved grid coordinates
+
+        Returns:
+        --------
+        lambda_matrix : (sparse matrix) matrix of convolutions of each coordinate with the corresponding grid cells"""
+
+        matrix = scipy.sparse.lil_matrix((self.n_cells, self.n_cells))
+
+        if len(coord) == 2:
+            lambda_comp = self._add_ptcl_wgt_lambda_2d
+        else:
+            lambda_comp = self._add_ptcl_wgt_lambda
+
+        for idx, coord in enumerate(coordinates):
+            lambda_comp(idx, coord, matrix)
+
+        # benchmark csr versus csc for performance -sdw, Sep. 1 2021
+        # matrix.tocsc()
+        matrix.tocsr() 
+
+        return matrix
 
     @jit
     def _add_ptcl_wgt_lambda_2d(self, idx, ptcl_pos, lambda_matrix):
@@ -149,20 +151,23 @@ class WignerDistribution:
     def _get_grid_coordinates(self):
         """Set the coordinates for each grid point."""
         
+        print('entering get grid coordinates \n')
+        
         coord_array = np.zeros((self.n_cells, self.dim))
         
         # compute the individual indices from the stride index
         for idx in range(self.n_cells):
             # this runs backwards, so will have to flip in the end
             for jdx, N_val in enumerate(np.flip(self.cell_dims)):
-                coord_array[idx, jdx] = idx%N_val
-                idx -= idx%N_val
-                
-        coord_array = np.flip(self.coord_array, axis=1)
+                tmp_idx = idx
+                coord_array[idx, jdx] = (tmp_idx%N_val)
+                tmp_idx -= tmp_idx%N_val
+                                
+        coord_array = np.flip(coord_array, axis=1)
         
         # scale and center indices to grid
         coord_array *= self.cell_ds
-        coord_array -= self.cell_lens/2.
+        coord_array -= self.lens/2.
         
         return coord_array
         
@@ -216,7 +221,8 @@ class WignerDistribution:
             array_idx[idx] = np.flip(array_idx[idx])
 
         return array_idx
-            
+          
+        
     @jit
     def index_to_stride(self, linear_indices):
         """Convert a linear index to a stride index"""
@@ -233,87 +239,24 @@ class WignerDistribution:
                 
             
             
-######## Below lies the old stuff we are improving        
+    def set_distribution(self, grid):
         
-
-    def tent_integral(self,dx_vector,dy_vector):
+        print(np.shape(grid))
+        print(self.cell_ns)
         
-        # Create two matricies that contain the motion of the particles
-        dx_matrix, dx_matrix_t = np.meshgrid(dx_vector, dx_vector)
-        dy_matrix, dy_matrix_t = np.meshgrid(dy_vector, dy_vector)
-
-        # This is the kernel for the tent integral
-        shift_x = self.x_grid_matrix_t + dx_matrix_t
-        shift_y = self.y_grid_matrix_t + dy_matrix_t
-
-        kernel_x = ( self.x_grid_matrix - shift_x ) / self.dx
-        kernel_y = ( self.y_grid_matrix - shift_y ) / self.dtheta
-
-        # We use the numpy piecewise function for the tent integral, first we define a list of lambda functions
-        f_list = [  lambda x: 1./6. * (-3. * x ** 3. - 6. * x**2. + 4.),
-                    lambda x: -1./6. * (x - 2.) ** 3.,
-                    lambda x: 1./6. * (x + 2.) ** 3,
-                    lambda x: 1./6. * (3. * x** 3. - 6. * x** 2. + 4.),
-                    lambda x: 0.]
-
-        # This computes the tent integral for both the x and y motion if there are no periodic boundary conditions
-        out_y = np.piecewise(kernel_y, [(kernel_y >= -1.) * (kernel_y <= 0.),
-             (kernel_y >= 1.) * (kernel_y <= 2.),
-             (kernel_y >= -2.) * (kernel_y < -1.),
-             (kernel_y > 0.) * (kernel_y < 1.),
-             (kernel_y > 2.) + (kernel_y < -2.)], f_list)
-
+        #if np.shape(grid) != self.cell_ns:
+        #    except ValueError:
+        #        print(
+        #            'Shape of grid () does not match shape of distribution ()'.format(np.shape(grid), self.cell_ns)
+        #        )
+        #        raise
+                
+        self.wgt_array = np.flatten(grid)
         
-        out_x = np.piecewise(kernel_x, [(kernel_x >= -1.) * (kernel_x <= 0.),
-             (kernel_x >= 1.) * (kernel_x <= 2.),
-             (kernel_x >= -2.) * (kernel_x < -1.),
-             (kernel_x > 0.) * (kernel_x < 1.),
-             (kernel_x > 2.) + (kernel_x < -2.)], f_list)
-
-        return out_x * out_y * self.dx * self.dtheta
-
-
-
-    def set_initial_weights(self, w0):
-        """ Function to set the initial weights """
-
-        self.wigner_grid = w0
     
-
-    def update_weights(self,dx,dy):
-
-        # Compute the matrix containing all the tent integrals for the shifted particle positons
-        matrix_RHS = self.tent_integral(dx,dy)
-
-        # Solve for the new weights based on the result of the tent integrals
-        w1 = np.dot(np.dot(self.wigner_grid,matrix_RHS),self.lambda_matrix_inv)
-
-        # Update the weights
-        self.wigner_grid = w1
-       
-    
-    def create_grid_SW(self):
+    def get_distribution(self):
         
-        x_min = -self.L_x/2
-        x_max = self.L_x/2
-        th_min = -self.L_theta/2
-        th_max = self.L_theta/2
-        n_cells = self.n_x * self.n_theta
-        
-        # fill in the coordinates with linear strides
-        coord_array = np.zeros((n_cells,2))
-        coord_array[:,0] = np.repeat(np.linspace(x_min, x_max, self.n_x), self.n_theta)
-        coord_array[:,1] = np.tile(np.linspace(th_min, th_max, self.n_theta), self.n_x)
-        
-        self.lambda_matrix = self.tent_integral(np.zeros(n_cells), np.zeros(n_cells))
-        self.lambda_matrix_inv = np.linalg.inv(self.lambda_matrix)
-
-        # create the weight grid
-        self.wigner_grid = np.zeros(n_cells)
-    
-    
-    def set_initial_weights_SW(self, w0):
-        """Set the weights in Wigner grid"""
+        return np.reshape(self.wgt_array, self.cell_ns)
         
         
 class ElectricField:
@@ -325,7 +268,7 @@ class ElectricField:
         self.dim = len(ns)
         self.n_cells = np.prod(ns)
         self.cell_dims = ns
-        self.cell_lens = Ls
+        self.lens = Ls
         self.cell_ds   = np.arrays(ns)/np.array(Ls)
 
         ## The create_grid function initializes all of the matrices needed for deposition
