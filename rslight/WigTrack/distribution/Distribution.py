@@ -10,53 +10,18 @@ class WignerDistribution:
 
     def __init__(self, ns = [10, 10, 10, 10], Ls = [1., 1., 1., 1.]):
 
-        
         self.dim = len(ns)
         self.n_cells = np.prod(ns)
         self.cell_dims = ns
         self.cell_lens = Ls
         self.cell_ds   = np.arrays(ns)/np.array(Ls)
 
-        ## The create_grid function initializes all of the matrices needed for deposition
-        self._create_grid()
+        # set the lambda_0 matrix used in the deposition. 
+        # Just set the matrix once, as it is sparse and expensive to construct
         self.coord_array = self._get_grid_coordinates()
-        
-        # compute the base lambda matrix, which is a sparse matrix
         self._lambda_0 = self._compute_lambda_matrix(self.coord_array)
         
         self.kind = 'Wigner'
-
-
-    def _create_grid(self):
-        """Create the weights and coordinates"""
-        
-        
-        self.wgt_array = np.zeros(self.n_cells)
-        self._set_coordinates()
-        
-        # create the array of coordinates
-        
-        
-        
-        x_min = -self.L_x/2
-        x_max = self.L_x/2
-        y_min = -self.L_theta
-        y_max = self.L_theta
-
-        # Define the grid for the simulation
-        self.x0 = np.linspace(x_min,x_max,self.n_x)
-        self.y0 = np.linspace(y_min,y_max,self.n_theta)
-        self.X0,self.Y0 = np.meshgrid(self.x0,self.y0)
-        
-        self.x0_p = self.X0.flatten()
-        self.y0_p = self.Y0.flatten()
-
-        self.x_grid_matrix, self.x_grid_matrix_t = np.meshgrid(self.x0_p,self.x0_p)
-        self.y_grid_matrix, self.y_grid_matrix_t = np.meshgrid(self.y0_p,self.y0_p)
-
-        self.lambda_matrix = self.tent_integral(np.zeros(len(self.x0_p)), np.zeros(len(self.x0_p)))
-        self.lambda_matrix_inv = np.linalg.inv(self.lambda_matrix)
-        print(self.lambda_matrix_inv)
         
     
     ##
@@ -68,8 +33,9 @@ class WignerDistribution:
     
         lambda_matrix = self._compute_lambda_matrix(self.coords)
         self.wgt_array = scipy.sparse.linalg.spsolve(self._lambda_0, lambda_matrix.dot(self.wgt_array))
-        
-    
+ 
+
+    @jit
     def _compute_lambda_matrix(self, coordinates):
     """Compute the convolution matrix for a set of coordinates back to the original grid
     
@@ -83,11 +49,53 @@ class WignerDistribution:
     
     matrix = scipy.sparse.lil_matrix((self.n_cells, self.n_cells))
     
+    if len(coord) == 2:
+        lambda_comp = self._add_ptcl_wgt_lambda_2d
+    else:
+        lambda_comp = self._add_ptcl_wgt_lambda
+    
     for idx, coord in enumerate(coordinates):
+        lambda_comp(idx, coord, matrix)
         
-        self._add_ptcl_wgt_lambda(idx, coord, matrix)
+    # benchmark csr versus csc for performance -sdw, Sep. 1 2021
+    # matrix.tocsc()
+    matrix.tocsr() 
         
     return matrix
+
+    @jit
+    def _add_ptcl_wgt_lambda_2d(self, idx, ptcl_pos, lambda_matrix):
+        """Deposit the individual particle weights to the lambda matrix that defines the deposition
+        
+        Args:
+        -----
+        
+        idx (int) : the index of the particle's original coordinate
+        
+        ptcl_pos (array) : the 2N-dimensional coordinates of the particle after moving
+        
+        lambda_matrix (sparse matrix) : the matrix being deposited to"""
+        
+        cell_idx = self._middle_index(ptcl_pos)
+        frac_pos = (ptcl_pos/self.cell_dx) - cell_idx
+        
+        funcs = [lambda x: 1./6. * (-3. * x ** 3. - 6. * x**2. + 4.),
+                 lambda x: -1./6. * (x - 2.) ** 3.,
+                 lambda x: 1./6. * (x + 2.) ** 3,
+                 lambda x: 1./6. * (3. * x** 3. - 6. * x** 2. + 4.)]
+        
+        # This can likely be done using recursion instead, which would be 
+        # much more elegant and dimension-agnostic than nested loops -sdw 31 Aug 2021
+        for i in range(0,4):
+            idx0 = cell_idx[0] + i - 1
+            wgt0 = funcs[i](frac_pos[0])
+            
+            for j in range(0,4):
+                idx1 = cell_idx[1] + j - 1
+                wgt1 = funcs[j](frac_pos[1])
+                        
+                stride_idx = self.index_to_stride([[idx0, idx1]])
+                lambda_matrix[idx, stride_idx] += wgt0*wgt1
 
 
     @jit
@@ -104,7 +112,6 @@ class WignerDistribution:
         lambda_matrix (sparse matrix) : the matrix being deposited to"""
         
         cell_idx = self._middle_index(ptcl_pos)
-        
         frac_pos = (ptcl_pos/self.cell_dx) - cell_idx
         
         funcs = [lambda x: 1./6. * (-3. * x ** 3. - 6. * x**2. + 4.),
@@ -115,29 +122,24 @@ class WignerDistribution:
         # This can likely be done using recursion instead, which would be 
         # much more elegant and dimension-agnostic than nested loops -sdw 31 Aug 2021
         for i in range(0,4):
-            
             idx0 = cell_idx[0] + i - 1
             wgt0 = funcs[i](frac_pos[0])
             
             for j in range(0,4):
-                
-                idx1 = cell_idx[1] + j
+                idx1 = cell_idx[1] + j - 1
                 wgt1 = funcs[j](frac_pos[1])
                 
                 for k in range(0,4):
-                    
-                    idx2 = cell_idx[2] + k
+                    idx2 = cell_idx[2] + k - 1
                     wgt2 = funcs[k](frac_pos[2])
                     
                     for l in range(0,4):
-                        
-                        idx3 = cell_idx[3] + l
+                        idx3 = cell_idx[3] + l -1
                         wgt3 = funcs[l](frac_pos[3])
                         
-                        stride_idx = 
-                        
-                        lambda_matrix[idx,]
-        
+                        stride_idx = self.index_to_stride([[idx0, idx1, idx2, idx3]])
+                        lambda_matrix[idx, stride_idx] += wgt0*wgt1*wgt2*wgt3
+                                
 
     ##
     ## Grid Helper Functions
@@ -204,12 +206,12 @@ class WignerDistribution:
         
         array_idx = np.array((len(stride_indexes), self.dim))
 
-        for idx, val in enumerate(stride_indexes):
+        for idx, stride in enumerate(stride_indexes):
             
             for jdx, n_dir in np.flip(self.cell_dims):
-                array_idx[idx, jdx] = val%n_dir
-                val -= val%n_dir
-                val = val // n_dir
+                array_idx[idx, jdx] = stride%n_dir
+                stride -= val%n_dir
+                stride = stride // n_dir
                 
             array_idx[idx] = np.flip(array_idx[idx])
 
