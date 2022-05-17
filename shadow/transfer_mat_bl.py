@@ -185,11 +185,12 @@ def shadow_drift_trace(beam, length = 900.0):
 def tmat_calc(beam, epsilon):
     """
     This function computes the transfer
-    matrix from and input beam object
+    matrix from an input beam object
     containing a propagated central ray
     and 4 offset rays.  It also returns the
     values x, x', z, z' values of the
     central ray.
+    beam: Shadow beam object with propagated rays
     epsilon: offset parameter
     """
     
